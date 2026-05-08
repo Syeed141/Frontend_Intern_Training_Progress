@@ -1,5 +1,14 @@
 "use client";
 
+
+import {
+  LoginFormValues,
+  LoginApiResponse,
+} from "./types/auth";
+
+
+
+
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -32,22 +41,10 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-type LoginResponse = {
-  accessToken?: string;
-  access_token?: string;
-  token?: string;
-  email?: string;
-  user?: {
-    email?: string;
-    name?: string;
-  };
-};
-
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
-  const [loginError, setLoginError] = useState("");
-
+  const [credentialError, setCredentialError] = useState("");
   const router = useRouter();
 
   const dispatch = useDispatch();
@@ -60,65 +57,106 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    setLoginError("");
+  // const onSubmit = async (data: LoginFormData) => {
+  //   setLoginError("");
 
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
+  //   try {
+  //     const response = await fetch("/api/login", {
+  //       method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-        },
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
 
-        body: JSON.stringify({
-          ...data,
-          grantType: "password",
-        }),
-      });
+  //       body: JSON.stringify({
+  //         ...data,
+  //         grantType: "password",
+  //       }),
+  //     });
 
-      const result = (await response.json()) as LoginResponse & {
-        message?: string;
-      };
+  //     const result = (await response.json()) as LoginResponse & {
+  //       message?: string;
+  //     };
 
-      if (!response.ok) {
-        setLoginError(
-          result.message ||
-            "There is an issue with the credentials you have entered. Please try again."
-        );
+  //     if (!response.ok) {
+  //       setLoginError(
+  //         result.message ||
+  //           "There is an issue with the credentials you have entered. Please try again."
+  //       );
 
-        return;
-      }
+  //       return;
+  //     }
 
-      // Save user + token to Redux
-      const userEmail = result.user?.email || result.email || data.email;
+  //     // Save user + token to Redux
+  //     const userEmail = result.user?.email || result.email || data.email;
 
-      dispatch(
-        setCredentials({
-          user: {
-            email: userEmail,
-            name: result.user?.name,
-          },
+  //     dispatch(
+  //       setCredentials({
+  //         user: {
+  //           email: userEmail,
+  //           name: result.user?.name,
+  //         },
 
-          token:
-            result.accessToken ||
-            result.token ||
-            result.access_token ||
-            null,
-        })
-      );
+  //         token:
+  //           result.accessToken ||
+  //           result.token ||
+  //           result.access_token ||
+  //           null,
+  //       })
+  //     );
 
-      toast.success("Login successful!");
+  //     toast.success("Login successful!");
 
-      router.push("/dashboard");
+  //     router.push("/dashboard");
 
-    } catch {
-      setLoginError(
-        "Something went wrong. Please try again."
-      );
+  //   } catch {
+  //     setLoginError(
+  //       "Something went wrong. Please try again."
+  //     );
+  //   }
+  // };
+const onSubmit = async (data: LoginFormValues) => {
+  setCredentialError("");
+
+  try {
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+        grantType: "password",
+      }),
+    });
+
+    const result = (await response.json()) as LoginApiResponse;
+
+    if (!result.success) {
+      setCredentialError(result.error.message);
+      return;
     }
-  };
 
+    const successResult = result.data;
+
+    dispatch(
+      setCredentials({
+        user: {
+          email:
+            successResult.email ||
+            successResult.user?.email ||
+            data.email,
+        },
+      })
+    );
+
+    toast.success("Login successful!");
+    router.push("/dashboard");
+  } catch {
+    setCredentialError("Something went wrong. Please try again.");
+  }
+};
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
 
@@ -152,12 +190,12 @@ export default function LoginPage() {
         >
 
           {/* Top Login Error */}
-          {loginError && (
+          {credentialError && (
             <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-4 py-3 text-sm text-red-700">
 
               <FaExclamationTriangle className="text-red-600 w-5 h-5 shrink-0" />
 
-              <p>{loginError}</p>
+              <p>{credentialError}</p>
 
             </div>
           )}
