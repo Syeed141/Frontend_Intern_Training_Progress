@@ -1,21 +1,11 @@
 "use client";
 
+import { LoginFormValues, LoginApiResponse } from "./types/auth";
 
-import {
-  LoginFormValues,
-  LoginApiResponse,
-} from "./types/auth";
-
-
-
-
+import Button from "./components/button";
 import Image from "next/image";
 import { useState } from "react";
-import {
-  FaEye,
-  FaEyeSlash,
-  FaExclamationTriangle,
-} from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaExclamationTriangle } from "react-icons/fa";
 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -57,109 +47,48 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // const onSubmit = async (data: LoginFormData) => {
-  //   setLoginError("");
+  const onSubmit = async (data: LoginFormValues) => {
+    setCredentialError("");
 
-  //   try {
-  //     const response = await fetch("/api/login", {
-  //       method: "POST",
-
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-
-  //       body: JSON.stringify({
-  //         ...data,
-  //         grantType: "password",
-  //       }),
-  //     });
-
-  //     const result = (await response.json()) as LoginResponse & {
-  //       message?: string;
-  //     };
-
-  //     if (!response.ok) {
-  //       setLoginError(
-  //         result.message ||
-  //           "There is an issue with the credentials you have entered. Please try again."
-  //       );
-
-  //       return;
-  //     }
-
-  //     // Save user + token to Redux
-  //     const userEmail = result.user?.email || result.email || data.email;
-
-  //     dispatch(
-  //       setCredentials({
-  //         user: {
-  //           email: userEmail,
-  //           name: result.user?.name,
-  //         },
-
-  //         token:
-  //           result.accessToken ||
-  //           result.token ||
-  //           result.access_token ||
-  //           null,
-  //       })
-  //     );
-
-  //     toast.success("Login successful!");
-
-  //     router.push("/dashboard");
-
-  //   } catch {
-  //     setLoginError(
-  //       "Something went wrong. Please try again."
-  //     );
-  //   }
-  // };
-const onSubmit = async (data: LoginFormValues) => {
-  setCredentialError("");
-
-  try {
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: data.email,
-        password: data.password,
-        grantType: "password",
-      }),
-    });
-
-    const result = (await response.json()) as LoginApiResponse;
-
-    if (!result.success) {
-      setCredentialError(result.error.message);
-      return;
-    }
-
-    const successResult = result.data;
-
-    dispatch(
-      setCredentials({
-        user: {
-          email:
-            successResult.email ||
-            successResult.user?.email ||
-            data.email,
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      })
-    );
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          grantType: "password",
+        }),
+      });
 
-    toast.success("Login successful!");
-    router.push("/dashboard");
-  } catch {
-    setCredentialError("Something went wrong. Please try again.");
-  }
-};
+      const result = (await response.json()) as LoginApiResponse;
+
+      if (!result.success) {
+        setCredentialError(result.error.message);
+        return;
+      }
+
+      const successResult = result.data;
+
+      dispatch(
+        setCredentials({
+          user: {
+            email:
+              successResult.email || successResult.user?.email || data.email,
+          },
+        }),
+      );
+
+      toast.success("Login successful!");
+      router.push("/dashboard");
+    } catch {
+      setCredentialError("Something went wrong. Please try again.");
+    }
+  };
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
-
       {/* Logo */}
       <div className="mb-6">
         <Image
@@ -173,30 +102,19 @@ const onSubmit = async (data: LoginFormValues) => {
 
       {/* Login Card */}
       <div className="w-full max-w-md bg-white shadow-lg rounded-sm border-t-8 border-blue-600 p-8">
-
         {/* Heading */}
-        <h1 className="text-3xl font-bold text-gray-900">
-          Login
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900">Login</h1>
 
-        <p className="mt-1 text-gray-400">
-          Continue with pattern50
-        </p>
+        <p className="mt-1 text-gray-400">Continue with pattern50</p>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="mt-10 space-y-6"
-        >
-
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-6">
           {/* Top Login Error */}
           {credentialError && (
             <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-4 py-3 text-sm text-red-700">
-
               <FaExclamationTriangle className="text-red-600 w-5 h-5 shrink-0" />
 
               <p>{credentialError}</p>
-
             </div>
           )}
 
@@ -224,11 +142,9 @@ const onSubmit = async (data: LoginFormValues) => {
             {/* Email Error */}
             {errors.email && (
               <div className="mt-1 flex items-center gap-2 text-sm text-red-600">
-
                 <FaExclamationTriangle className="w-4 h-4 shrink-0" />
 
                 <p>{errors.email.message}</p>
-
               </div>
             )}
           </div>
@@ -243,7 +159,6 @@ const onSubmit = async (data: LoginFormValues) => {
             </label>
 
             <div className="relative">
-
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -259,28 +174,19 @@ const onSubmit = async (data: LoginFormValues) => {
               {/* Eye Toggle */}
               <button
                 type="button"
-                onClick={() =>
-                  setShowPassword(!showPassword)
-                }
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
               >
-                {showPassword ? (
-                  <FaEyeSlash />
-                ) : (
-                  <FaEye />
-                )}
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
-
             </div>
 
             {/* Password Error */}
             {errors.password && (
               <div className="mt-1 flex items-center gap-2 text-sm text-red-600">
-
                 <FaExclamationTriangle className="w-4 h-4 shrink-0" />
 
                 <p>{errors.password.message}</p>
-
               </div>
             )}
 
@@ -296,26 +202,16 @@ const onSubmit = async (data: LoginFormValues) => {
           </div>
 
           {/* Login Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-
+          <Button type="submit" disabled={isSubmitting} fullWidth>
             {isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
-
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-
+              <>
+                <span className="loading loading-spinner loading-sm"></span>
                 Logging in...
-
-              </span>
+              </>
             ) : (
               "Login"
             )}
-
-          </button>
-
+          </Button>
         </form>
       </div>
     </main>
