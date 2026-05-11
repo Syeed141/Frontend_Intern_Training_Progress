@@ -7,6 +7,7 @@ const initialState: AuthState = {
 
 type SetCredentialsPayload = {
   user: AuthUser;
+  token: string;
 };
 
 const authSlice = createSlice({
@@ -18,7 +19,7 @@ const authSlice = createSlice({
       action: PayloadAction<SetCredentialsPayload>
     ) => {
       state.user = action.payload.user;
-      state.token = null;
+      state.token = action.payload.token;
     },
 
     logout: (state) => {

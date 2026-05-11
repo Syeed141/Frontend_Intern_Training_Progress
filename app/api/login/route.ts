@@ -6,6 +6,45 @@ import {
   LoginApiResponse,
 } from "../../types/auth";
 
+const tokenKeys = new Set([
+  "accessToken",
+  "access_token",
+  "token",
+  "jwt",
+  "jwtToken",
+  "bearerToken",
+  "idToken",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function findStringValue(
+  value: unknown,
+  keys: Set<string>
+): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  for (const [key, fieldValue] of Object.entries(value)) {
+    if (keys.has(key) && typeof fieldValue === "string" && fieldValue) {
+      return fieldValue;
+    }
+  }
+
+  for (const fieldValue of Object.values(value)) {
+    const nestedValue = findStringValue(fieldValue, keys);
+
+    if (nestedValue) {
+      return nestedValue;
+    }
+  }
+
+  return undefined;
+}
+
 export async function POST(request: Request) {
   try {
     const body: LoginRequestBody = await request.json();
@@ -46,7 +85,7 @@ export async function POST(request: Request) {
       }),
     });
 
-    const result = await backendResponse.json();
+    const result: unknown = await backendResponse.json();
 
     if (!backendResponse.ok) {
       const errorResponse: LoginErrorResponse = {
@@ -64,7 +103,25 @@ export async function POST(request: Request) {
       });
     }
 
-    const successResponse: LoginSuccessResponse = result;
+    const token = findStringValue(result, tokenKeys);
+
+    if (!token) {
+      const errorResponse: LoginErrorResponse = {
+        message: "Login succeeded but the server did not return an access token.",
+      };
+
+      const apiResponse: LoginApiResponse = {
+        success: false,
+        error: errorResponse,
+      };
+
+      return NextResponse.json(apiResponse, { status: 502 });
+    }
+
+    const successResponse: LoginSuccessResponse = {
+      accessToken: token,
+      email: findStringValue(result, new Set(["email"])),
+    };
 
     const apiResponse: LoginApiResponse = {
       success: true,

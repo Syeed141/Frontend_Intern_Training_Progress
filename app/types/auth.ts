@@ -9,10 +9,15 @@ export type LoginRequestBody = {
   grantType: "password";
 };
 
+// with tokens
 export type LoginSuccessResponse = {
   accessToken?: string;
   access_token?: string;
   token?: string;
+
+  refreshToken?: string;
+  refresh_token?: string;
+
   email?: string;
   user?: {
     email?: string;
@@ -40,4 +45,8 @@ export type AuthUser = {
 export type AuthState = {
   user: AuthUser | null;
   token: string | null;
+};
+
+export type ProfileResponse = {
+  email: string;
 };
