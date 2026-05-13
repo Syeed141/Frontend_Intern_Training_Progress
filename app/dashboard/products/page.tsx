@@ -1,9 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Search, PlusCircle, ChevronRight, ChevronDown } from "lucide-react";
+import {
+  Search,
+  PlusCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import { getProductList } from "@/app/services/productApi";
+
+const STATUS_OPTIONS = [
+  "all",
+  "draft",
+  "signed",
+  "amended",
+  "terminated",
+  "completed",
+] as const;
+
+type StatusFilter = (typeof STATUS_OPTIONS)[number];
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString("en-US", {
@@ -29,70 +47,137 @@ function getStatusClass(status: string) {
   return "bg-blue-100 text-blue-600";
 }
 
+function getValidPage(value: string | null) {
+  const pageNumber = Number(value);
 
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+    return 1;
+  }
 
-// function getPaginationPages(currentPage: number, totalPages: number) {
-//   const pages: Array<number | "..."> = [];
+  return pageNumber;
+}
 
-//   if (totalPages <= 7) {
-//     for (let page = 1; page <= totalPages; page++) {
-//       pages.push(page);
-//     }
+function getValidSize(value: string | null) {
+  const sizeNumber = Number(value);
 
-//     return pages;
-//   }
+  if (!Number.isInteger(sizeNumber) || sizeNumber < 1) {
+    return 10;
+  }
 
-//   pages.push(1);
+  return sizeNumber;
+}
 
-//   if (currentPage > 3) {
-//     pages.push("...");
-//   }
+function getValidStatus(value: string | null): StatusFilter {
+  if (STATUS_OPTIONS.includes(value as StatusFilter)) {
+    return value as StatusFilter;
+  }
 
-//   const startPage = Math.max(2, currentPage - 1);
-//   const endPage = Math.min(totalPages - 1, currentPage + 1);
-
-//   for (let page = startPage; page <= endPage; page++) {
-//     pages.push(page);
-//   }
-
-//   if (currentPage < totalPages - 2) {
-//     pages.push("...");
-//   }
-
-//   pages.push(totalPages);
-
-//   return pages;
-// }
-
+  return "all";
+}
 
 function getPaginationPages(
   currentPage: number,
   totalPages: number,
 ): Array<number | "..."> {
+  const pages: Array<number | "..."> = [];
+
   if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
+    for (let page = 1; page <= totalPages; page++) {
+      pages.push(page);
+    }
+
+    return pages;
   }
 
   if (currentPage <= 3) {
-    return [1, 2, 3, 4, "...", totalPages];
+    pages.push(1, 2, 3, 4, "...", totalPages);
+    return pages;
   }
 
   if (currentPage >= totalPages - 2) {
-    return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    pages.push(
+      1,
+      "...",
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    );
+
+    return pages;
   }
 
-  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+  pages.push(
+    1,
+    "...",
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    "...",
+    totalPages,
+  );
+
+  return pages;
 }
 
-export default function ProductsPage() {
-  const [statusFilter, setStatusFilter] = useState("all");
+function ProductsPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const page = getValidPage(searchParams.get("page"));
+  const itemsPerPage = getValidSize(searchParams.get("size"));
+  const statusFilter = getValidStatus(searchParams.get("filterBy"));
+  const searchQuery = searchParams.get("query") ?? "";
+
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchText, setSearchText] = useState(searchQuery);
 
-  const [searchText, setSearchText] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+    setSearchText(searchQuery);
+  }, [searchQuery]);
 
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 10;
+  const updateProductUrl = useCallback(
+    ({
+      nextPage,
+      nextSearchQuery,
+      nextStatusFilter,
+      nextSize,
+    }: {
+      nextPage?: number;
+      nextSearchQuery?: string;
+      nextStatusFilter?: StatusFilter;
+      nextSize?: number;
+    }) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      params.set("page", String(nextPage ?? page));
+      params.set("size", String(nextSize ?? itemsPerPage));
+
+      if (nextSearchQuery !== undefined) {
+        const trimmedQuery = nextSearchQuery.trim();
+
+        if (trimmedQuery) {
+          params.set("query", trimmedQuery);
+        } else {
+          params.delete("query");
+        }
+      }
+
+      if (nextStatusFilter !== undefined) {
+        if (nextStatusFilter === "all") {
+          params.delete("filterBy");
+        } else {
+          params.set("filterBy", nextStatusFilter);
+        }
+      }
+
+      router.push(`${pathname}?${params.toString()}`, {
+        scroll: false,
+      });
+    },
+    [itemsPerPage, page, pathname, router, searchParams],
+  );
 
   const {
     data: productResponse,
@@ -113,6 +198,35 @@ export default function ProductsPage() {
   const products = productResponse?.data ?? [];
   const totalItems = productResponse?.count ?? 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    if (searchParams.get("size") !== String(itemsPerPage)) {
+      updateProductUrl({
+        nextPage: page,
+        nextSize: itemsPerPage,
+      });
+
+      return;
+    }
+
+    if (totalPages === 0 && page !== 1) {
+      updateProductUrl({
+        nextPage: 1,
+      });
+
+      return;
+    }
+
+    if (totalPages > 0 && page > totalPages) {
+      updateProductUrl({
+        nextPage: totalPages,
+      });
+    }
+  }, [isLoading, itemsPerPage, page, searchParams, totalPages, updateProductUrl]);
 
   if (isLoading) {
     return <p className="p-8 text-sm text-gray-500">Loading products...</p>;
@@ -136,6 +250,14 @@ export default function ProductsPage() {
             type="text"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                updateProductUrl({
+                  nextPage: 1,
+                  nextSearchQuery: searchText,
+                });
+              }
+            }}
             placeholder="Search by product, company name"
             className="w-full text-xs outline-none placeholder:text-gray-400"
           />
@@ -145,8 +267,10 @@ export default function ProductsPage() {
           <button
             type="button"
             onClick={() => {
-              setSearchQuery(searchText);
-              setPage(1);
+              updateProductUrl({
+                nextPage: 1,
+                nextSearchQuery: searchText,
+              });
             }}
             className="rounded bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-700"
           >
@@ -168,20 +292,16 @@ export default function ProductsPage() {
 
             {isFilterOpen && (
               <div className="absolute left-0 top-10 z-20 w-full rounded border border-gray-200 bg-white py-2 shadow-sm">
-                {[
-                  "all",
-                  "draft",
-                  "signed",
-                  "amended",
-                  "terminated",
-                  "completed",
-                ].map((status) => (
+                {STATUS_OPTIONS.map((status) => (
                   <button
                     key={status}
                     type="button"
                     onClick={() => {
-                      setStatusFilter(status);
-                      setPage(1);
+                      updateProductUrl({
+                        nextPage: 1,
+                        nextStatusFilter: status,
+                      });
+
                       setIsFilterOpen(false);
                     }}
                     className="block w-full px-4 py-2 text-left text-sm capitalize text-gray-800 hover:bg-gray-50"
@@ -280,6 +400,21 @@ export default function ProductsPage() {
 
         {totalPages > 1 && (
           <div className="flex items-center gap-4">
+            {page > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  updateProductUrl({
+                    nextPage: page - 1,
+                  })
+                }
+                className="text-gray-400 hover:text-blue-600"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+
             {getPaginationPages(page, totalPages).map(
               (paginationPage, index) => {
                 if (paginationPage === "...") {
@@ -292,7 +427,11 @@ export default function ProductsPage() {
                   <button
                     key={paginationPage}
                     type="button"
-                    onClick={() => setPage(paginationPage)}
+                    onClick={() =>
+                      updateProductUrl({
+                        nextPage: paginationPage,
+                      })
+                    }
                     className={
                       isActive
                         ? "font-semibold text-blue-600"
@@ -307,7 +446,11 @@ export default function ProductsPage() {
 
             <button
               type="button"
-              onClick={() => setPage((currentPage) => currentPage + 1)}
+              onClick={() =>
+                updateProductUrl({
+                  nextPage: page + 1,
+                })
+              }
               disabled={page >= totalPages}
               className="disabled:cursor-not-allowed disabled:opacity-30"
             >
@@ -317,5 +460,17 @@ export default function ProductsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <p className="p-8 text-sm text-gray-500">Loading products...</p>
+      }
+    >
+      <ProductsPageContent />
+    </Suspense>
   );
 }
