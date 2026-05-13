@@ -1,16 +1,7 @@
-import { ProfileResponse } from "../types/auth";
+import axiosInstance from "../lib/axiosInstance";
 
-export async function getProfile(token: string): Promise<ProfileResponse> {
-  const response = await fetch("/api/profile", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export async function getDashboardData() {
+  const response = await axiosInstance.get("/dashboard");
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch the required profile");
-  }
-
-  return response.json();
+  return response.data;
 }

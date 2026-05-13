@@ -10,11 +10,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { FaEye, FaEyeSlash, FaExclamationTriangle } from "react-icons/fa";
-
 import Button from "./components/button";
 import { LoginApiError, loginUser } from "./services/authApi";
 import { setCredentials } from "./redux/features/authSlice";
-
+import { saveAuthTokens } from "./lib/authCookies";
 import {
   LoginErrorResponse,
   LoginRequestBody,
@@ -50,6 +49,7 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Tanstack query mutation
   const loginMutation = useMutation<
     LoginSuccessResponse,
     LoginApiError,
@@ -57,35 +57,25 @@ export default function LoginPage() {
   >({
     mutationFn: loginUser,
 
-    onSuccess: (successResult, submittedData) => {
-      const token =
-        successResult.accessToken ||
-        successResult.token ||
-        successResult.access_token;
+    onSuccess: async (successResult, submittedData) => {
+      const { accessToken, refreshToken, authorization, email } = successResult;
 
-      if (!token) {
-        setCredentialError({
-          message: "Login succeeded but token was missing.",
-        });
-        return;
-      }
+      saveAuthTokens(accessToken, refreshToken);
 
       dispatch(
         setCredentials({
           user: {
-            email:
-              successResult.email ||
-              successResult.user?.email ||
-              submittedData.email,
+            email: email || submittedData.email,
           },
-          token,
-        })
+          accessToken,
+          refreshToken,
+          authorization,
+        }),
       );
 
       toast.success("Login successful!");
       router.push("/dashboard");
     },
-
     onError: (error) => {
       setCredentialError(error.response);
     },
@@ -201,11 +191,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Button
-            type="submit"
-            disabled={loginMutation.isPending}
-            fullWidth
-          >
+          <Button type="submit" disabled={loginMutation.isPending} fullWidth>
             {loginMutation.isPending ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>
