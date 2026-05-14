@@ -44,17 +44,16 @@ export async function loginUser(
 
     const { auth, user } = response.data;
 
-    if (!auth?.accessToken || !auth?.refreshToken) {
-      throw loginError("Login succeeded, but the auth tokens were not returned.");
-    }
+   
 
     return {
       accessToken: auth.accessToken,
       refreshToken: auth.refreshToken,
       authorization: `Bearer ${auth.accessToken}`,
-      email: user?.email || body.email,
+      email: user.email,
     };
-  } catch (error) {
+  } 
+  catch (error) {
     if (isLoginApiError(error)) {
       throw error;
     }

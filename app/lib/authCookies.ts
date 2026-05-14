@@ -1,5 +1,30 @@
 import Cookies from "js-cookie";
 
+type PersistedAuth = {
+  accessToken?: string | null;
+  refreshToken?: string | null;
+};
+
+function getPersistedAuth(): PersistedAuth {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const persistedRoot = window.localStorage.getItem("persist:root");
+
+  if (!persistedRoot) {
+    return {};
+  }
+
+  const root = JSON.parse(persistedRoot) as { auth?: string };
+
+  if (!root.auth) {
+    return {};
+  }
+
+  return JSON.parse(root.auth) as PersistedAuth;
+}
+
 export function saveAuthTokens(
   accessToken: string,
   refreshToken: string
@@ -17,9 +42,9 @@ export function saveAuthTokens(
 }
 
 export function getAccessToken() {
-  return Cookies.get("accessToken");
+  return Cookies.get("accessToken") ?? getPersistedAuth().accessToken;
 }
 
 export function getRefreshToken() {
-  return Cookies.get("refreshToken");
+  return Cookies.get("refreshToken") ?? getPersistedAuth().refreshToken;
 }

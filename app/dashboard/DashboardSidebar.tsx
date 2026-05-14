@@ -98,11 +98,11 @@ export default function DashboardSidebar() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 h-dvh w-55 shrink-0 overflow-y-auto overscroll-contain bg-[#f7f8fa] px-4 py-4 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 h-screen max-h-screen w-55 shrink-0 overflow-hidden bg-[#f7f8fa] px-4 py-4 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex min-h-full flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <div className="shrink-0">
             <button
               type="button"
@@ -122,7 +122,7 @@ export default function DashboardSidebar() {
             />
           </div>
 
-          <nav className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
             <div className="flex min-h-full flex-col gap-5 pb-2">
               {sidebarGroups.map((group) => (
                 <div key={group.title || "main"}>

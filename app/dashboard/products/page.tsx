@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -20,8 +20,6 @@ const STATUS_OPTIONS = [
   "terminated",
   "completed",
 ] as const;
-
-type StatusFilter = (typeof STATUS_OPTIONS)[number];
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString("en-US", {
@@ -45,34 +43,6 @@ function getStatusClass(status: string) {
   }
 
   return "bg-blue-100 text-blue-600";
-}
-
-function getValidPage(value: string | null) {
-  const pageNumber = Number(value);
-
-  if (!Number.isInteger(pageNumber) || pageNumber < 1) {
-    return 1;
-  }
-
-  return pageNumber;
-}
-
-function getValidSize(value: string | null) {
-  const sizeNumber = Number(value);
-
-  if (!Number.isInteger(sizeNumber) || sizeNumber < 1) {
-    return 10;
-  }
-
-  return sizeNumber;
-}
-
-function getValidStatus(value: string | null): StatusFilter {
-  if (STATUS_OPTIONS.includes(value as StatusFilter)) {
-    return value as StatusFilter;
-  }
-
-  return "all";
 }
 
 function getPaginationPages(
@@ -125,59 +95,41 @@ function ProductsPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const page = getValidPage(searchParams.get("page"));
-  const itemsPerPage = getValidSize(searchParams.get("size"));
-  const statusFilter = getValidStatus(searchParams.get("filterBy"));
+  const page = Number(searchParams.get("page")) || 1;
+  const itemsPerPage = Number(searchParams.get("size")) || 10;
+  const statusFilter = searchParams.get("filterBy") ?? "all";
   const searchQuery = searchParams.get("query") ?? "";
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [searchText, setSearchText] = useState(searchQuery);
 
-  useEffect(() => {
-    setSearchText(searchQuery);
-  }, [searchQuery]);
+  function updateProductUrl({
+    nextPage = page,
+    nextSearchQuery,
+    nextStatusFilter,
+    nextSize = itemsPerPage,
+  }: {
+    nextPage?: number;
+    nextSearchQuery?: string;
+    nextStatusFilter?: string;
+    nextSize?: number;
+  }) {
+    const params = new URLSearchParams(searchParams.toString());
 
-  const updateProductUrl = useCallback(
-    ({
-      nextPage,
-      nextSearchQuery,
-      nextStatusFilter,
-      nextSize,
-    }: {
-      nextPage?: number;
-      nextSearchQuery?: string;
-      nextStatusFilter?: StatusFilter;
-      nextSize?: number;
-    }) => {
-      const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(nextPage));
+    params.set("size", String(nextSize));
 
-      params.set("page", String(nextPage ?? page));
-      params.set("size", String(nextSize ?? itemsPerPage));
+    if (nextSearchQuery !== undefined) {
+      params.set("query", nextSearchQuery.trim());
+    }
 
-      if (nextSearchQuery !== undefined) {
-        const trimmedQuery = nextSearchQuery.trim();
+    if (nextStatusFilter !== undefined) {
+      params.set("filterBy", nextStatusFilter);
+    }
 
-        if (trimmedQuery) {
-          params.set("query", trimmedQuery);
-        } else {
-          params.delete("query");
-        }
-      }
-
-      if (nextStatusFilter !== undefined) {
-        if (nextStatusFilter === "all") {
-          params.delete("filterBy");
-        } else {
-          params.set("filterBy", nextStatusFilter);
-        }
-      }
-
-      router.push(`${pathname}?${params.toString()}`, {
-        scroll: false,
-      });
-    },
-    [itemsPerPage, page, pathname, router, searchParams],
-  );
+    router.push(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
+  }
 
   const {
     data: productResponse,
@@ -199,35 +151,6 @@ function ProductsPageContent() {
   const totalItems = productResponse?.count ?? 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-
-    if (searchParams.get("size") !== String(itemsPerPage)) {
-      updateProductUrl({
-        nextPage: page,
-        nextSize: itemsPerPage,
-      });
-
-      return;
-    }
-
-    if (totalPages === 0 && page !== 1) {
-      updateProductUrl({
-        nextPage: 1,
-      });
-
-      return;
-    }
-
-    if (totalPages > 0 && page > totalPages) {
-      updateProductUrl({
-        nextPage: totalPages,
-      });
-    }
-  }, [isLoading, itemsPerPage, page, searchParams, totalPages, updateProductUrl]);
-
   if (isLoading) {
     return <p className="p-8 text-sm text-gray-500">Loading products...</p>;
   }
@@ -242,22 +165,27 @@ function ProductsPageContent() {
 
       <h1 className="mt-1 text-2xl font-bold text-gray-800">All Products</h1>
 
-      <div className="mt-8 flex items-center justify-between">
+      <form
+        className="mt-8 flex items-center justify-between"
+        onSubmit={(event) => {
+          event.preventDefault();
+
+          const formData = new FormData(event.currentTarget);
+          const query = formData.get("query") as string;
+
+          updateProductUrl({
+            nextPage: 1,
+            nextSearchQuery: query,
+          });
+        }}
+      >
         <div className="flex w-90 items-center gap-2 border-b border-gray-200 pb-2 text-gray-400">
           <Search className="h-4 w-4" />
 
           <input
+            name="query"
             type="text"
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                updateProductUrl({
-                  nextPage: 1,
-                  nextSearchQuery: searchText,
-                });
-              }
-            }}
+            defaultValue={searchQuery}
             placeholder="Search by product, company name"
             className="w-full text-xs outline-none placeholder:text-gray-400"
           />
@@ -265,13 +193,7 @@ function ProductsPageContent() {
 
         <div className="flex items-center gap-4">
           <button
-            type="button"
-            onClick={() => {
-              updateProductUrl({
-                nextPage: 1,
-                nextSearchQuery: searchText,
-              });
-            }}
+            type="submit"
             className="rounded bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-700"
           >
             Search
@@ -313,12 +235,16 @@ function ProductsPageContent() {
             )}
           </div>
 
-          <button className="flex items-center gap-2 rounded bg-blue-600 px-5 py-2 text-xs font-semibold text-white">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/products/createProducts")}
+            className="flex items-center gap-2 rounded bg-blue-600 px-5 py-2 text-xs font-semibold text-white"
+          >
             <PlusCircle className="h-4 w-4" />
             Add product
           </button>
         </div>
-      </div>
+      </form>
 
       <div className="mt-4 overflow-hidden border border-gray-50">
         <table className="w-full border-collapse text-left text-xs">
@@ -390,9 +316,7 @@ function ProductsPageContent() {
       <div className="mt-5 flex items-center justify-between text-xs text-gray-400">
         <p>
           Showing{" "}
-          <span className="font-semibold text-gray-600">
-            {products.length}
-          </span>{" "}
+          <span className="font-semibold text-gray-600">{products.length}</span>{" "}
           out of{" "}
           <span className="font-semibold text-gray-600">{totalItems}</span>{" "}
           results

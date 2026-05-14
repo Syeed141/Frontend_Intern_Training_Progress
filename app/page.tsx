@@ -14,6 +14,7 @@ import Button from "./components/button";
 import { LoginApiError, loginUser } from "./services/authApi";
 import { setCredentials } from "./redux/features/authSlice";
 import { saveAuthTokens } from "./lib/authCookies";
+
 import {
   LoginErrorResponse,
   LoginRequestBody,
@@ -33,11 +34,13 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useDispatch();
 
   const [showPassword, setShowPassword] = useState(false);
+
   const [credentialError, setCredentialError] =
     useState<LoginErrorResponse | null>(null);
 
@@ -57,7 +60,7 @@ export default function LoginPage() {
   >({
     mutationFn: loginUser,
 
-    onSuccess: async (successResult, submittedData) => {
+    onSuccess: async (successResult) => {
       const { accessToken, refreshToken, authorization, email } = successResult;
 
       saveAuthTokens(accessToken, refreshToken);
@@ -65,7 +68,7 @@ export default function LoginPage() {
       dispatch(
         setCredentials({
           user: {
-            email: email || submittedData.email,
+            email: email,
           },
           accessToken,
           refreshToken,
