@@ -1,13 +1,23 @@
 "use client";
 
-import { useFormContext } from "react-hook-form";
-import type { CreateProductFormData } from "@/app/schemas/createProductSchema";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { Plus, Trash2 } from "lucide-react";
+
+import type { CreateProductFormInput } from "@/app/schemas/createProductSchema";
 import FormRow from "./FormRow";
 import { inputClass, sectionTitleClass } from "./formStyles";
 
 export default function LegalDocumentsSection() {
-  // register connects the file input and checkbox to react-hook-form.
-  const { register } = useFormContext<CreateProductFormData>();
+  const { control, register } = useFormContext<CreateProductFormInput>();
+  const useLinkToShareDocument = useWatch({
+    control,
+    name: "useLinkToShareDocument",
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "documentLinks",
+  });
 
   return (
     <section>
@@ -17,12 +27,15 @@ export default function LegalDocumentsSection() {
         <FormRow label="Upload Doc">
           <input
             type="file"
+            disabled={useLinkToShareDocument}
             {...register("document")}
-            className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-gray-700`}
+            className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-gray-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}
           />
 
           <p className="mt-1 text-xs text-gray-400">
-            Any document file can be uploaded within 10MB.
+            {useLinkToShareDocument
+              ? "Disable link sharing to upload a document."
+              : "Any document file can be uploaded within 10MB."}
           </p>
         </FormRow>
 
@@ -39,6 +52,40 @@ export default function LegalDocumentsSection() {
             Use link to share document
           </label>
         </div>
+
+        {useLinkToShareDocument && (
+          <FormRow label="Document Link">
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex gap-2">
+                  <input
+                    {...register(`documentLinks.${index}.url`)}
+                    placeholder="Paste document link"
+                    className={inputClass}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    disabled={fields.length === 1}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-gray-200 text-gray-500 transition hover:bg-gray-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => append({ url: "" })}
+                className="inline-flex items-center gap-2 rounded border border-blue-100 px-3 py-2 text-sm font-semibold text-blue-600 transition hover:border-blue-200 hover:bg-blue-50 active:scale-95"
+              >
+                <Plus className="h-4 w-4" />
+                Add link
+              </button>
+            </div>
+          </FormRow>
+        )}
       </div>
     </section>
   );

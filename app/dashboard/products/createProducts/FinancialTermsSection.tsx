@@ -73,12 +73,15 @@ export default function FinancialTermsSection({
 
         <FormRow label="Discount" error={discountError}>
           <div className="relative">
+             <span className="absolute left-3 top-2.5 text-sm text-gray-400">
+              $
+            </span>
             <input
               type="number"
               step="0.01"
               placeholder="0.00"
               {...register("discount")}
-              className={`${getInputClass(discountError)} pr-28`}
+              className={`${getInputClass(discountError)} pl-7 pr-12`}
             />
 
             <span className="absolute right-3 top-2.5 text-xs text-gray-400">

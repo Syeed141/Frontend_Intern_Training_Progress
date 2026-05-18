@@ -1,5 +1,5 @@
 "use client";
-
+// redux hook useSelector
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/features/store";
 
@@ -22,7 +22,7 @@ export default function DashboardPage() {
             </p>
 
             <p className="mt-1 text-lg font-semibold text-gray-800">
-              {user?.email || "No email found"}
+              {user?.email}
             </p>
           </div>
 

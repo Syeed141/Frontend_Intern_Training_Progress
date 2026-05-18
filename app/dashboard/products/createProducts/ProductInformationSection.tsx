@@ -20,7 +20,7 @@ export default function ProductInformationSection({ companies }: Props) {
     formState: { errors },
   } = useFormContext<CreateProductFormData>();
 
-  // Error messages are stored in variables to keep the JSX simple.
+  // Error messages are stored in these variables 
   const companyError = errors.companyId?.message;
   const productNameError = errors.productName?.message;
   const productDetailsError = errors.productDetails?.message;
@@ -64,10 +64,6 @@ export default function ProductInformationSection({ companies }: Props) {
             placeholder="Enter product details"
             className={`${getInputClass(productDetailsError)} min-h-24 resize-none`}
           />
-
-          <p className="mt-1 text-xs text-gray-400">
-            Keep product details under 250 characters.
-          </p>
         </FormRow>
       </div>
     </section>

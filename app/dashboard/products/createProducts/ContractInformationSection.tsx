@@ -1,9 +1,10 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { Calendar } from "lucide-react";
-import type { CreateProductFormData } from "@/app/schemas/createProductSchema";
+import { useWatch } from "react-hook-form";
+import type { CreateProductFormInput } from "@/app/schemas/createProductSchema";
 import type { DropdownItem } from "@/app/services/productApi";
+import DateInput from "./DateInput";
 import FormRow from "./FormRow";
 import { getInputClass, sectionTitleClass } from "./formStyles";
 
@@ -17,11 +18,15 @@ export default function ContractInformationSection({
 }: ContractInformationSectionProps) {
   // Get form helpers from the FormProvider in page.tsx.
   const {
+    control,
     register,
     formState: { errors },
-  } = useFormContext<CreateProductFormData>();
+  } = useFormContext<CreateProductFormInput>();
 
-  // Error messages are stored in variables to keep the JSX simple.
+  const startDate = useWatch({ control, name: "startDate" });
+  const endDate = useWatch({ control, name: "endDate" });
+
+  // Error messages are stored in variables 
   const contractNameError = errors.contractName?.message;
   const statusError = errors.status?.message;
   const startDateError = errors.startDate?.message;
@@ -56,28 +61,26 @@ export default function ContractInformationSection({
         </FormRow>
 
         <FormRow label="Start Date" required error={startDateError}>
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="date"
-              {...register("startDate")}
-              className={`${getInputClass(startDateError)} pl-9`}
-            />
-          </div>
+          <DateInput
+            placeholder="Pick a start date"
+            value={startDate}
+            error={startDateError}
+            registration={register("startDate")}
+            className={`${getInputClass(startDateError)} pl-10`}
+          />
         </FormRow>
 
         <FormRow label="End Date" required error={endDateError}>
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="date"
-              {...register("endDate")}
-              className={`${getInputClass(endDateError)} pl-9`}
-            />
-          </div>
+          <DateInput
+            placeholder="Pick an end date"
+            value={endDate}
+            error={endDateError}
+            registration={register("endDate")}
+            className={`${getInputClass(endDateError)} pl-10`}
+          />
         </FormRow>
 
-        <FormRow label="Team Member" error={teamMemberError}>
+        {/* <FormRow label="Team Member" error={teamMemberError}>
           <select
             {...register("teamMemberId")}
             className={getInputClass(teamMemberError)}
@@ -90,7 +93,7 @@ export default function ContractInformationSection({
               </option>
             ))}
           </select>
-        </FormRow>
+        </FormRow> */}
       </div>
     </section>
   );

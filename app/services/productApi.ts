@@ -127,14 +127,45 @@ export async function getTeamMemberDropdown(): Promise<DropdownItem[]> {
 }
 
 export type RateSheetDetails = {
-  safeTerms: number;
-  valuationCap: number;
-  discount: number;
+  _id?: string;
+  name?: string;
+
+  safeTerms?: number;
+  valuationCap?: number;
+  discount?: number;
+
+  teamStructures?: {
+    _id: string;
+    employeeRoleId: string;
+    internalRate: number;
+    billRate: number;
+
+    role?: {
+      _id?: string;
+      name?: string;
+    };
+  }[];
 };
 
 type RateSheetDetailsApiResponse = {
   data: RateSheetDetails | { data: RateSheetDetails };
 } | RateSheetDetails;
+
+function unwrapRateSheetDetails(
+  responseData: RateSheetDetailsApiResponse,
+): RateSheetDetails {
+  if ("data" in responseData) {
+    const details = responseData.data;
+
+    if ("data" in details) {
+      return details.data;
+    }
+
+    return details;
+  }
+
+  return responseData;
+}
 
 export async function getRateSheetDetails(
   rateSheetId: string,
@@ -143,25 +174,21 @@ export async function getRateSheetDetails(
     `/rate-sheet/details/${rateSheetId}`,
   );
 
-  const responseData = response.data;
-
-  if ("safeTerms" in responseData) {
-    return responseData;
-  }
-
-  if ("data" in responseData && "data" in responseData.data) {
-    return responseData.data.data;
-  }
-
-  const details = responseData.data;
-
-  if ("safeTerms" in details) {
-    return details;
-  }
-
-  return details.data;
+  return unwrapRateSheetDetails(response.data);
 }
 
+// team members based on the rate sheet
+export async function getTeamMemberDropdownByRoleId(
+  roleId: string,
+): Promise<DropdownItem[]> {
+  const response = await axiosInstance.get("/employee/list/active/roleId", {
+    params: {
+      roleId,
+    },
+  });
+
+  return toDropdownItems(getDropdownData(response.data));
+}
 export async function createProduct(body: FormData) {
   const response = await axiosInstance.post("/product/create", body);
   return response.data;

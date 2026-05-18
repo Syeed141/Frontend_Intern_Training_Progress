@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+const rateSheetMemberSchema = z.object({
+  teamStructureId: z.string(),
+  employeeRoleId: z.string(),
+  roleName: z.string(),
+  internalRate: z.number(),
+  billRate: z.number(),
+
+  teamMemberId: z.string().min(1, "Team member is required."),
+  workType: z.string().min(1, "Work type is required."),
+  startDate: z.string().min(1, "Start date is required."),
+  endDate: z.string(),
+});
+
 export const createProductSchema = z.object({
   companyId: z.string().min(1, "Company is required."),
   productName: z.string().min(1, "Product name is required."),
@@ -19,9 +32,15 @@ export const createProductSchema = z.object({
   discount: z.coerce.number(),
 
   rateSheetId: z.string().min(1, "Rate sheet is required."),
+  rateSheetMembers: z.array(rateSheetMemberSchema),
 
   document: z.any(),
   useLinkToShareDocument: z.boolean(),
+  documentLinks: z.array(
+    z.object({
+      url: z.string(),
+    }),
+  ),
 });
 
 export type CreateProductFormInput = z.input<typeof createProductSchema>;
