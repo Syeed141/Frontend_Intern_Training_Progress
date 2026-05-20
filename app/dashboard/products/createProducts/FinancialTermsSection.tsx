@@ -3,8 +3,11 @@
 import { useFormContext } from "react-hook-form";
 import type { CreateProductFormData } from "@/app/schemas/createProductSchema";
 import type { DropdownItem } from "@/app/services/productApi";
-import FormRow from "./FormRow";
-import { getInputClass, sectionTitleClass } from "./formStyles";
+import FormRow from "../../../components/forms/FormRow";
+import {
+  getInputClass,
+  sectionTitleClass,
+} from "../../../components/forms/formStyles";
 
 type FinancialTermsSectionProps = {
   // List shown inside the Rate Sheet dropdown.
@@ -73,7 +76,7 @@ export default function FinancialTermsSection({
 
         <FormRow label="Discount" error={discountError}>
           <div className="relative">
-             <span className="absolute left-3 top-2.5 text-sm text-gray-400">
+            <span className="absolute left-3 top-2.5 text-sm text-gray-400">
               $
             </span>
             <input
@@ -90,6 +93,7 @@ export default function FinancialTermsSection({
           </div>
         </FormRow>
 
+        {/* vvi */}
         <FormRow label="Rate Sheet" required error={rateSheetError}>
           <select
             {...register("rateSheetId")}

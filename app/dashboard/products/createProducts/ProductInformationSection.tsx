@@ -5,8 +5,11 @@ import { useFormContext } from "react-hook-form";
 import type { CreateProductFormData } from "@/app/schemas/createProductSchema";
 import type { DropdownItem } from "@/app/services/productApi";
 
-import FormRow from "./FormRow";
-import { getInputClass, sectionTitleClass } from "./formStyles";
+import FormRow from "../../../components/forms/FormRow";
+import {
+  getInputClass,
+  sectionTitleClass,
+} from "../../../components/forms/formStyles";
 
 type Props = {
   // List shown inside the Company dropdown.
@@ -20,7 +23,7 @@ export default function ProductInformationSection({ companies }: Props) {
     formState: { errors },
   } = useFormContext<CreateProductFormData>();
 
-  // Error messages are stored in these variables 
+  // Error messages are stored in these variables
   const companyError = errors.companyId?.message;
   const productNameError = errors.productName?.message;
   const productDetailsError = errors.productDetails?.message;

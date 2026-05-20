@@ -4,8 +4,11 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 
 import type { CreateProductFormInput } from "@/app/schemas/createProductSchema";
-import FormRow from "./FormRow";
-import { inputClass, sectionTitleClass } from "./formStyles";
+import FormRow from "../../../components/forms/FormRow";
+import {
+  inputClass,
+  sectionTitleClass,
+} from "../../../components/forms/formStyles";
 
 export default function LegalDocumentsSection() {
   const { control, register } = useFormContext<CreateProductFormInput>();
@@ -48,7 +51,6 @@ export default function LegalDocumentsSection() {
               {...register("useLinkToShareDocument")}
               className="h-4 w-4"
             />
-
             Use link to share document
           </label>
         </div>

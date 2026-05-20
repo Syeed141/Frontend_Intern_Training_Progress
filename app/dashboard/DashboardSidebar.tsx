@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Building2,
@@ -74,8 +74,17 @@ const sidebarGroups: SidebarGroup[] = [
 
 export default function DashboardSidebar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [activeItem, setActiveItem] = useState("Overview");
   const [isOpen, setIsOpen] = useState(false);
+
+  const activeRouteLabel = sidebarGroups
+    .flatMap((group) => group.items)
+    .find(
+      (item) =>
+        item.href &&
+        (pathname === item.href || pathname.startsWith(`${item.href}/`)),
+    )?.label;
 
   return (
     <>
@@ -135,7 +144,9 @@ export default function DashboardSidebar() {
                   <div className="space-y-1">
                     {group.items.map((item) => {
                       const Icon = item.icon;
-                      const isActive = activeItem === item.label;
+                      const isActive = activeRouteLabel
+                        ? activeRouteLabel === item.label
+                        : activeItem === item.label;
 
                       return (
                         <button

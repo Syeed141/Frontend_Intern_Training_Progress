@@ -301,7 +301,15 @@ function ProductsPageContent() {
                         Details
                       </button>
 
-                      <button className="text-xs font-semibold text-blue-600">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/products/${product._id}/ControlRoom`,
+                          )
+                        }
+                        className="text-xs font-semibold text-blue-600"
+                      >
                         Control room
                       </button>
                     </td>

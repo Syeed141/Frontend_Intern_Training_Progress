@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  useFieldArray,
-  useFormContext,
-  useWatch,
-} from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CircleMinus, UserCircle } from "lucide-react";
 
@@ -14,7 +10,39 @@ import {
   getRateSheetDetails,
   getTeamMemberDropdownByRoleId,
 } from "@/app/services/productApi";
-import DateInput from "./DateInput";
+import DateInput from "../../../components/forms/DateInput";
+
+type RoleReference = string | { _id?: string; id?: string; name?: string };
+
+function getRoleId(role?: RoleReference) {
+  if (!role) {
+    return "";
+  }
+
+  if (typeof role === "string") {
+    return role;
+  }
+
+  return role._id ?? role.id ?? "";
+}
+
+function getRoleName(role?: RoleReference) {
+  if (!role || typeof role === "string") {
+    return "";
+  }
+
+  return role.name ?? "";
+}
+
+// Rate sheet details can expose the role id directly or inside the nested role.
+// The employee lookup API needs this role id to load the correct dropdown items.
+function getTeamStructureRoleId(
+  teamStructure: NonNullable<
+    Awaited<ReturnType<typeof getRateSheetDetails>>["teamStructures"]
+  >[number],
+) {
+  return getRoleId(teamStructure.employeeRoleId) || getRoleId(teamStructure.role);
+}
 
 export function RateSheetMembersSection() {
   const {
@@ -28,16 +56,21 @@ export function RateSheetMembersSection() {
     CreateProductFormInput["rateSheetMembers"]
   >([]);
 
+  // This value comes from FinancialTermsSection's rate sheet dropdown.
+  // Changing it drives the whole dynamic members section.
   const selectedRateSheetId = useWatch({
     control,
     name: "rateSheetId",
   });
 
+  // Keep the latest dynamic row values available for save state and DateInput.
   const rateSheetMembers = useWatch({
     control,
     name: "rateSheetMembers",
   });
 
+  // Load the selected rate sheet only after the user picks one.
+  // The response contains the team structures that become dynamic form rows.
   const { data: rateSheetDetails } = useQuery({
     queryKey: ["rate-sheet-details", selectedRateSheetId],
     queryFn: () => getRateSheetDetails(selectedRateSheetId),
@@ -49,19 +82,25 @@ export function RateSheetMembersSection() {
     name: "rateSheetMembers",
   });
 
+  // Normalize a missing teamStructures response to an empty list so downstream
+  // memoized calculations can stay simple.
   const teamStructures = useMemo(
     () => rateSheetDetails?.teamStructures ?? [],
     [rateSheetDetails?.teamStructures],
   );
 
+  // Each unique role needs one employee dropdown request.
+  // Duplicates are removed so the same role is not fetched repeatedly.
   const teamStructureRoleIds = useMemo(
     () =>
       Array.from(
-        new Set(teamStructures.map((item) => item.employeeRoleId).filter(Boolean)),
+        new Set(teamStructures.map(getTeamStructureRoleId).filter(Boolean)),
       ),
     [teamStructures],
   );
 
+  // Fetch active employees for every role found in the selected rate sheet.
+  // React Query runs these requests in parallel.
   const teamMemberQueries = useQueries({
     queries: teamStructureRoleIds.map((employeeRoleId) => ({
       queryKey: ["team-members-by-role", employeeRoleId],
@@ -70,6 +109,8 @@ export function RateSheetMembersSection() {
     })),
   });
 
+  // Store fetched employees by role id so each dynamic row can render the
+  // correct team member options for its role.
   const teamMembersByRoleId = useMemo(
     () =>
       new Map(
@@ -98,6 +139,8 @@ export function RateSheetMembersSection() {
     return `${getFieldClass(error)} appearance-none pr-9`;
   }
 
+  // Validate only the dynamic rateSheetMembers array before marking it saved.
+  // The final form submit still validates the complete product form.
   async function handleSaveMembers() {
     const isValid = await trigger("rateSheetMembers", { shouldFocus: true });
 
@@ -106,6 +149,8 @@ export function RateSheetMembersSection() {
     }
   }
 
+  // When rate sheet details arrive, convert each team structure from the API
+  // into one row in react-hook-form's rateSheetMembers field array.
   useEffect(() => {
     if (!rateSheetDetails?.teamStructures) {
       replace([]);
@@ -115,11 +160,12 @@ export function RateSheetMembersSection() {
     const formsFromApi = teamStructures.map((item) => {
       return {
         teamStructureId: item._id,
-        employeeRoleId: item.employeeRoleId,
-        roleName: item.role?.name ?? "",
+        employeeRoleId: getTeamStructureRoleId(item),
+        roleName: getRoleName(item.role) || getRoleName(item.employeeRoleId),
         internalRate: item.internalRate,
         billRate: item.billRate,
 
+        // User-editable fields start empty and are filled from the row controls.
         teamMemberId: "",
         workType: "",
         startDate: "",
@@ -130,6 +176,7 @@ export function RateSheetMembersSection() {
     replace(formsFromApi);
   }, [rateSheetDetails, replace, teamStructures]);
 
+  // Hide this section until there is enough rate sheet data to build rows.
   if (!selectedRateSheetId || !rateSheetDetails) {
     return null;
   }
@@ -157,6 +204,8 @@ export function RateSheetMembersSection() {
       </div>
 
       {fields.map((field, index) => {
+        // The field array provides stable row metadata, while useWatch gives
+        // the latest user-entered values for the same row index.
         const teamMembersForThisRole =
           teamMembersByRoleId.get(field.employeeRoleId) ?? [];
         const memberErrors = errors.rateSheetMembers?.[index];
@@ -189,6 +238,8 @@ export function RateSheetMembersSection() {
               </span>
             </p>
 
+            {/* Hidden inputs keep API-provided row metadata in form state so it
+                is included in validation and payload creation. */}
             <input
               type="hidden"
               {...register(`rateSheetMembers.${index}.teamStructureId`)}
@@ -282,9 +333,7 @@ export function RateSheetMembersSection() {
                   placeholder="Pick a start date"
                   value={memberValues?.startDate}
                   error={startDateError}
-                  registration={register(
-                    `rateSheetMembers.${index}.startDate`,
-                  )}
+                  registration={register(`rateSheetMembers.${index}.startDate`)}
                   className={getFieldClass(startDateError)}
                 />
 
